@@ -1,4 +1,5 @@
 node_modules
+*.swp
 
 # Ignore pdf export directories
 hy-pdfs
