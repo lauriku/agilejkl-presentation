@@ -3,7 +3,9 @@ AgileJKL 29.3.2017
 
 Notes:
 - Who am I and what do I do at Gofore
--  
+- How long have I worked at Gofore
+- Job history; sysadmin/consultant positions 9+ years
+- Current project: Fonecta
 
 ---
 
@@ -12,14 +14,12 @@ Notes:
 1. Why I love Docker
 2. Why should you care?
 3. Daily use cases
-4. Production environments
-5. Case: Fonecta CI
-6. Example: Dockerizing and deploying a Node.js application to Amazon ECS
+4. Case: Fonecta CI
+5. Example: Dockerizing and deploying a Node.js app
 
 Notes:
 
 - Structure of the presentation
-- 
 
 ---
 
@@ -42,7 +42,7 @@ Notes:
 - Process Isolation
 - Versioning of dev and prod environments
 - Lighter and faster than Vagrant
-- Excellent for building Microservices with
+- Excellent for building and testing Microservices with
 - Faster deployments
 
 Notes:
@@ -50,15 +50,23 @@ Notes:
 - FROM nodejs:6.9
 - docker-compose up -> 15 services fire up and are ready to communicate
 with each other 
+- Docker not a necessity for microservices of course
 
 ---
 
 ## Daily use cases
 
 - _"How fast can you set up a GeoServer?"_
+
 ```bash
-docker run --rm -p 8080:8080 kartoza/geoserver
+docker run --name "postgis" -d -t kartoza/postgis:9.4-2.1
+docker run -p 8080:8080 --link postgis:postgis kartoza/geoserver
 ```
+
+Notes:
+- Customer asks in a meeting, whether I have worked with GeoServer before,
+and how long would it take to set it up. Fire up a container during the meeting,
+and let them know that it's feasible and seems fairly simple.
 
 --
 
@@ -94,51 +102,128 @@ services:
 ```
 
 Notes:
-- Customer asks in a meeting, whether I have worked with GeoServer before,
-and how long would it take to set it up. Fire up a container during the meeting,
-and let them know that it's feasible and seems fairly simple.
 - Application needs to be migrated live from Mongo replicaset1 to replicaset2
  - How to test? Run two replicasets + mongo-connector locally
 
----
+--
 
-## Code block
+- _If only there was a quick way to see if this Java 6 project compiles with Java 8_
 
-You can even add code examples:
-
-```python
-def print_names(names):
-  for name in names:
-    print(name)
+```bash
+WORKDIR=/app
+docker run \
+--rm \
+-v ${PWD}:${WORKDIR} \
+-v ~/.m2:${WORKDIR}/.m2 \
+--workdir ${WORKDIR} maven:3.3.9-jdk8 \
+mvn -B -Dmaven.repo.local=${WORKDIR}/.m2/repository/ compile
 ```
 
----
-
-## Inline code
-
-Or show inline code example such as `sudo apt-get upgrade`.
+Notes:
+- Running Maven without installing it
 
 ---
 
-## Tables
+## Case: Fonecta CI
 
-If you want to get fancy, you can add tables:
+- Jenkins v1.5 set up 5 years ago
+- EC2-classic, manually installed
+- 300+ jobs
+- Build dependencies installed by hand as needed
+- MongoDB, MySQL, PostgreSQL, Redis, Java, Scala, Node..
+- Only documentation of a job is the job itself
 
-| Tables        | Are           | Cool  |
-| ------------- |:-------------:| -----:|
-| col 3 is      | right-aligned | $1600 |
-| col 2 is      | centered      |   $12 |
-| zebra stripes | are neat      |    $1 |
+Notes:
+- Ongoing project to move all relevant jobs away from the old Jenkins server
+
+--
+
+### How to fix it?
+
+- Jenkins 2, Pipelines
+- Jenkins in a container for quick upgrades/downgrades
+- Automated setup with Chef
+- Self-healing with AWS AutoScaling
+
+Notes:
+- Totally change the way the builds are configured
+- Enable recreation of the Jenkins instance
+- Scripts to handle data persistence: tagged volume
+- Previously system + Jenkins upgrades were high-risk => Docker solved
+
+--
+
+### What about the builds?
+
+- Build configuration in version control: Jenkinsfiles
+- Have I mentioned docker yet?
+
+```groovy
+stage('Build') {
+  try {
+    docker.image("maven:3.3.9-jdk8").inside {
+      git url: 'https://github.com/lauriku/dropwizard-example.git'
+      withEnv(["MAVEN_OPTS=$mavenArgs"]) {
+        sh "mvn -B -s ${mavenSettingsFile} clean compile"
+      }
+    }
+  } catch(e) {
+    slackSend channel: projectSlackChannel, color: 'danger', message: slackMessageForFailedBuild
+    throw e
+  }
+}
+```
+
+Notes:
+- All job configurations and their change history now saved
+- Tooling + Java in containers
+- Builds isolated from each other
+
+--
+
+### I need a database to run my tests!
+
+```groovy
+stage('Test') {
+  node {
+    try {
+      docker.image("mongo:2.6.12").withRun { mongo ->
+        docker.image("maven:3.3.9-jdk8").inside("--link=${mongo.id}:${mongoContainerName}") {
+          withEnv(["mongo.host=${mongoContainerName}"]) {
+            sh "mvn test"
+          }
+        }
+      }
+    } catch(e) {
+      .....
+    }
+  }
+}
+```
+
+Notes:
+- Start mongo first, and keep it running for as long as the commands inside its
+closure take to execute
 
 ---
 
-## Blockquotes
+## Example: Dockerizing a Node.js app
+Let's shove a Node app inside a container and deploy it to Amazon ECS!
 
-> This is a blockquote
-> spanning multiple lines
+Notes:
+- Create a Dockerfile
+- Build locally
+- Create a Docker hub automated build
+- Create ECS Cluster
+- Deploy!
 
 ---
 
-## Reveal.js examples
+## Questions?
 
-For more examples, see the [Reveal.js demo](http://lab.hakim.se/reveal-js/)
+---
+
+## Thanks!
+
+
+
