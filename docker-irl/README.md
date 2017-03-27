@@ -55,8 +55,11 @@ with each other
 ---
 
 ## Daily use cases
+_Tales from the battlefield.._
 
-- _"How fast can you set up a GeoServer?"_
+--
+
+_"How fast can you set up a GeoServer?"_
 
 ```bash
 docker run --name "postgis" -d -t kartoza/postgis:9.4-2.1
@@ -70,7 +73,7 @@ and let them know that it's feasible and seems fairly simple.
 
 --
 
-- _"Can we do a migration between two MongoDB replicasets?_
+_"Can we do a migration between two MongoDB replicasets?_
 
 ```yaml
 version: '2'
@@ -107,20 +110,55 @@ Notes:
 
 --
 
-- _If only there was a quick way to see if this Java 6 project compiles with Java 8_
+_If only there was a way to compile a Maven project without installing Java+Maven_
 
 ```bash
 WORKDIR=/app
 docker run \
---rm \
--v ${PWD}:${WORKDIR} \
--v ~/.m2:${WORKDIR}/.m2 \
---workdir ${WORKDIR} maven:3.3.9-jdk8 \
-mvn -B -Dmaven.repo.local=${WORKDIR}/.m2/repository/ compile
+ --rm \
+ -v ${PWD}:${WORKDIR} \
+ -v ~/.m2:${WORKDIR}/.m2 \
+ --workdir ${WORKDIR} \
+ maven:3.3.9-jdk8 \
+ mvn -B -Dmaven.repo.local=${WORKDIR}/.m2/repository/ compile
 ```
 
 Notes:
 - Running Maven without installing it
+
+--
+
+_But I compile projects through my IDE, how do I.. _
+
+```dockerfile
+FROM java8
+
+USER lauriku
+RUN cd /home/lauriku \
+&& wget http://saimei.acc.umu.se/mirror/eclipse.org/technology/epp/downloads/release/mars/2/eclipse-jee-mars-2-linux-gtk-x86_64.tar.gz \
+&& tar xzf eclipse-jee-mars-2-linux-gtk-x86_64.tar.gz \
+&& wget ftp://ftp.funet.fi/pub/mirrors/apache.org/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz \
+&& mkdir maven \
+&& tar -C /home/user/maven -x -z -f apache-maven-3.3.9-bin.tar.gz \
+&& rm eclipse*.tar.gz apache-maven-*.tar.gz
+
+ENV M3_HOME=/home/lauriku/maven/apache-maven-3.3.9
+ENV PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/home/lauriku/maven/apache-maven-3.3.9/bin"
+
+CMD ["/home/lauriku/eclipse/eclipse"]
+```
+
+```bash
+docker run -it --rm \
+ -e DISPLAY=$DISPLAY \
+ -v /tmp/.X11-unix:/tmp/.X11-unix \
+ eclipse
+```
+
+_(cheers to @delic)_
+
+Notes:
+- UID's need to match inside the container
 
 ---
 
@@ -210,12 +248,18 @@ closure take to execute
 ## Example: Dockerizing a Node.js app
 Let's shove a Node app inside a container and deploy it to Amazon ECS!
 
+--
+
+### TODO
+
+1. Create a Dockerfile, build it
+2. Create a Docker Hub automated build
+3. Create an Amazon ECS cluster
+4. Deploy app to ECS
+
 Notes:
-- Create a Dockerfile
-- Build locally
-- Create a Docker hub automated build
-- Create ECS Cluster
-- Deploy!
+- Some resource created beforehand to Amazon, like Application Load Balancer, 
+Target group, Security Group and IAM role
 
 ---
 
