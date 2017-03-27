@@ -1,0 +1,68 @@
+Steps:
+
+- Create Dockerfile, contents:
+
+# Fixed version of node
+FROM node:7.7.4
+
+# Create a directory for our app inside the container
+RUN mkdir -p /app
+
+# Change working directory inside the container
+WORKDIR /app
+
+# Copy the package.json file for running npm install
+COPY package.json /app
+
+# Npm install all the dependencies
+RUN npm install
+
+# Copy our code inside the container
+COPY . /app
+
+# Expose port 3000 from the container to the host
+EXPOSE 3000
+
+# Execute the application
+CMD [ "npm", "start" ]
+
+- Verify that it works by running
+docker run --rm -p 3000:3000 lauriku/agilejkl-node
+
+- Create automated build to Docker hub
+  - Go to hub.docker.com
+  - Click Top-right corner, Create -> Create Automated build
+  - Create auto-build github
+  - click lauriku -> agilejkl-node
+  - Go to Build Settings page
+  - Two ways to trigger builds:
+    - Automatically on git push
+    - Build Trigger
+  - Create build trigger
+  - curl -X POST to trigger url
+
+
+- Create an ECS cluster
+- ecs-cli help
+- ecs-cli configure --region eu-west-1 --profile default --cluster agilejkl
+- ecs-cli up --keypair laurik-key --capability-iam --size 2 --subnets subnet-536baa24,subnet-b28364eb --vpc vpc-c57985a0 --security-group ecs-cli configure --region eu-west-1 --profile default --cluster agilejkl --instance-type t2.micro
+
+- while creating, check how to deploy when it's done
+- create a docker-compose file which will be converted to task definition
+Content:
+
+version: '2'
+services:
+  agilejkl-node:
+    image: lauriku/agilejkl-node:latest
+    ports:
+      - 3000
+
+- Try to start with docker-compose up
+- Verify with browser
+
+- If all works and cluster is created, run
+
+ecs-cli compose service create --target-group-arn arn:aws:elasticloadbalancing:eu-west-1:697133838664:targetgroup/agilejkl/6b430cbcfaa5dc20 --container-name agilejkl-node --container-port 3000 --role arn:aws:iam::697133838664:role/agilejklEcs
+
+ecs-cli compose service scale 6

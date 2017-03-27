@@ -1,0 +1,16 @@
+Presentation prep:
+
+- Startup presentation
+- Browser to localhost:8000
+
+- Log in to gofore-crew in AWS
+- Open up + login github, agilejkl-node repo
+- Open up + login docker hub
+
+- change default aws profile to gofore-crew
+
+- create ecs-cluster 
+
+ecsy create-cluster --cluster=agilejkl --keyname=laurik-key --count=2
+
+leave tab open
